@@ -94,3 +94,21 @@ kalloc(void)
   return (char*)r;
 }
 
+/**
+ * Press Ctrl + P to print the number of free pages and "free memory"
+ */
+void
+procdump(void)
+{
+	uint nb_free_page = 0;
+	struct run *r;
+	r = kmem.freelist;
+
+	while(r != 0){
+		nb_free_page++;
+		r = r->next;
+	}
+
+	cprintf("Free pages: %d\n", nb_free_page);
+	cprintf("Memory quantity: %d\n", nb_free_page * PGSIZE);
+}
