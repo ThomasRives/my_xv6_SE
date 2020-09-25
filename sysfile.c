@@ -374,7 +374,7 @@ sys_chdir(void)
   char *path;
   struct inode *ip;
   struct proc *curproc = myproc();
-  
+
   begin_op();
   if(argstr(0, &path) < 0 || (ip = namei(path)) == 0){
     end_op();
@@ -441,4 +441,15 @@ sys_pipe(void)
   fd[0] = fd0;
   fd[1] = fd1;
   return 0;
+}
+
+int
+sys_lseek(void)
+{
+	int fd, offset, whence;
+	struct file *f;
+	if(argfd(0, &fd, &f) < 0 || argint(1, &offset) < 0 || argint(2, &whence) < 0)
+		return -1;
+	filelseek(fd, offset, whence);
+	return 0;
 }
