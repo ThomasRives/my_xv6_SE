@@ -84,8 +84,7 @@ stat(const char *n, struct stat *st)
 int
 atoi(const char *s)
 {
-	int n;
-	int neg;
+	int n, neg;
 
 	if(*s == '-'){
 		s++;
@@ -97,10 +96,7 @@ atoi(const char *s)
   	while('0' <= *s && *s <= '9')
     	n = n*10 + *s++ - '0';
 
-	if(neg)
-		n = -n;
-
-	return n;
+	return (neg)? -n: n;
 }
 
 void*
