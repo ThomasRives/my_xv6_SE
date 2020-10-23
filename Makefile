@@ -1,6 +1,7 @@
 OBJS = \
 	bio.o\
 	console.o\
+	drvmem.o\
 	exec.o\
 	file.o\
 	fs.o\
