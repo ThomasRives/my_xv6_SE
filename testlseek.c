@@ -19,7 +19,7 @@ main(int argc, char *argv[]) {
 	char *buf;
 
 	if((buf  = malloc(n)) == 0){
-		printf(1, "malloc failed");
+		printf(1, "malloc failed\n");
 		exit();
 	}
 
@@ -29,22 +29,25 @@ main(int argc, char *argv[]) {
 	}
 
 	if(lseek(fd, o, SEEK_SET) < 0){
-		printf(1, "lseek failed");
+		printf(1, "lseek failed\n");
 		exit();
 	}
 
 	if(read(fd, buf, n) < 0){
-		printf(1, "read failed");
+		printf(1, "read failed\n");
 		exit();
 	}
 
 	if(write(1, buf, n) < 0){
-		printf(1, "write failed");
+		printf(1, "write failed\n");
 		exit();
 	}
 	printf(1,"\n");
 
-	close(fd);
+	if(close(fd) < 0){
+		printf(1, "close failed\n");
+		exit();
+	}
 	free(buf);
 	exit();
 }

@@ -447,7 +447,6 @@ int
 sys_lseek(void)
 {
 	int fd, offset, whence;
-	uint file_size;
 
 	struct file *f;
 	if(argfd(0, &fd, &f) < 0 ||
@@ -455,27 +454,5 @@ sys_lseek(void)
 	   argint(2, &whence) < 0)
 		return -1;
 
-	file_size = f->ip->size;
-	if(offset < 0)
-		offset = file_size + offset;
-	else if(offset > file_size)
-		return -1;
-
-	switch(whence){
-		case SEEK_END:
-		case SEEK_SET:
-			f->off = offset;
-			break;
-		case SEEK_CUR:
-			if((f->off + offset) > file_size){
-				cprintf("Offset > file size\n");
-				return -1;
-			}
-			f->off += offset;
-			break;
-		default:
-			return -1;
-	}
-
-	return f->off;
+	return filelseek(f, offset, whence);
 }
