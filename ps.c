@@ -73,7 +73,7 @@ main(int argc, char *argv[])
   i = read(fd, &ptable, sizeof ptable);
   printf (1, "read %d bytes\n", i) ;
   if (i == -1) {
-    printf(2, "cannot read %d procs", NPROC);
+    printf(2, "cannot read %d procs\n", NPROC);
     exit();
   }
   if (close(fd) == -1) {

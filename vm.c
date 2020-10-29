@@ -385,6 +385,30 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+int 
+kmemread(char *dst, uint off, int n)
+{
+  pte_t *pgdir = myproc()->pgdir;
+  char *pg_adr;
+  uint i, size_cp;
+  pte_t *pte;
+  for (i = 0; i < n + PGSIZE; i += PGSIZE, dst += PGSIZE)
+  {
+    pg_adr = (char *)PGROUNDDOWN(off + i * PGSIZE);
+    pte = walkpgdir(pgdir, pg_adr, 0);
+    if (n - i > PGSIZE)
+      size_cp = PGSIZE;
+    else
+      size_cp = n - i;
+
+    if (pte == 0)
+      memset(dst, 0, size_cp);
+    else
+      memmove(dst, pg_adr, size_cp);
+  }
+  return 0;
+}
+
 //PAGEBREAK!
 // Blank page.
 //PAGEBREAK!

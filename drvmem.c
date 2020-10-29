@@ -15,53 +15,31 @@
 #include "proc.h"
 #include "x86.h"
 
-
 int
 drvmemread(struct inode *ip, char *dst, int n, uint off)
 {
-  // uint target;
-  // int c;
-  //
-  // iunlock(ip);
-  // target = n;
-  // while(n > 0){
-  //   while(input.r == input.w){
-  //     if(myproc()->killed){
-  //       ilock(ip);
-  //       return -1;
-  //     }
-  //     sleep(&input.r, &dmem.lock);
-  //   }
-  //   c = input.buf[input.r++ % INPUT_BUF];
-  //   if(c == C('D')){  // EOF
-  //     if(n < target){
-  //       // Save ^D for next time, to make sure
-  //       // caller gets a 0-byte result.
-  //       input.r--;
-  //     }
-  //     break;
-  //   }
-  //   *dst++ = c;
-  //   --n;
-  //   if(c == '\n')
-  //     break;
-  // }
-  // ilock(ip);
-  //
-  // return target - n;
-  return 0;
+  if(n < 0)
+    panic("drvmemread n < 0");
+
+  if(ip->minor == 0)
+    return 0;
+  
+  if(ip->minor == 2)
+  {
+    if ((off < EXTMEM) || ((off + n) > PHYSTOP))
+      panic("drvmemread out of mem");
+
+    memmove(dst, (void *)P2V(off), n);
+    return n;
+  }
+
+  memset(dst, 0, n);
+  return n;
 }
 
 int
 drvmemwrite(struct inode *ip, char *buf, int n, uint off)
 {
-  // int i;
-  //
-  // iunlock(ip);
-  // for(i = 0; i < n; i++)
-  //   dmemputc(buf[i] & 0xff);
-  // ilock(ip);
-  //
   return n;
 }
 
