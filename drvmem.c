@@ -21,20 +21,24 @@ drvmemread(struct inode *ip, char *dst, int n, uint off)
   if(n < 0)
     panic("drvmemread n < 0");
 
-  if(ip->minor == 0)
-    return 0;
-  
-  if(ip->minor == 2)
+  switch (ip->minor)
   {
-    if ((off < EXTMEM) || ((off + n) > PHYSTOP))
-      panic("drvmemread out of mem");
+    case 0:
+      return 0;
+    case 1:
+      memset(dst, 0, n);
+      return n;
+    case 2:
+      if ((off < EXTMEM) || ((off + n) > PHYSTOP))
+        panic("drvmemread out of mem");
 
-    memmove(dst, (void *)P2V(off), n);
-    return n;
+      memmove(dst, (void *)P2V(off), n);
+      return n;
+    case 3:
+      return kmemread(dst, off, n);
   }
 
-  memset(dst, 0, n);
-  return n;
+  return 0;
 }
 
 int

@@ -385,27 +385,58 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+static uint
+min(uint a, uint b)
+{
+  return (a < b)? a : b;
+}
+
 int 
 kmemread(char *dst, uint off, int n)
 {
-  pte_t *pgdir = myproc()->pgdir;
-  char *pg_adr;
-  uint i, size_cp;
-  pte_t *pte;
-  for (i = 0; i < n + PGSIZE; i += PGSIZE, dst += PGSIZE)
-  {
-    pg_adr = (char *)PGROUNDDOWN(off + i * PGSIZE);
-    pte = walkpgdir(pgdir, pg_adr, 0);
-    if (n - i > PGSIZE)
-      size_cp = PGSIZE;
-    else
-      size_cp = n - i;
+  pte_t *pgdir = myproc()->pgdir; // On récupère la table des pages.
+  char *pg_adr = (char *)PGROUNDDOWN(off); // On doit avoir l'adresse de début de page pour utiliser walkpgdir.
 
-    if (pte == 0)
-      memset(dst, 0, size_cp);
+  /*
+   * On vérifie si la page est là.
+   * 
+   * if
+   * Si elle est pas là, on considère qu'elle est vide (que des 0).
+   * Le '0' dans walkpgdir pour dire de ne pas l'allouer si elle n'est pas trouvé.
+   * 
+   * else
+   * La page est trouvé et on recopie la page. Attention à l'offset ! 
+   * Il faut lire à partir de l'offset !
+   * Attention ! n peut être inférieur à PGSIZE.
+   * min(PGSIZE, n) - (off % PGSIZE) = nombre d'octets à lire dans la 1ère page.
+  */
+  if (walkpgdir(pgdir, pg_adr, 0) == 0)
+    memset(dst, 0, min(PGSIZE, n) - (off % PGSIZE));
+  else
+    memmove(dst, pg_adr + (off % PGSIZE), min(PGSIZE, n) - (off % PGSIZE));
+
+  // On calcul l'offset dans le buffer de destination
+  uint i = min(PGSIZE, n) - (off % PGSIZE);
+  // On actualise n (ce qu'il reste à lire).
+  n -= min(PGSIZE, n) - off % PGSIZE;
+  // On passe à la page suivante.
+  pg_adr += PGSIZE;
+
+  /*
+   * On refait comme pour la page 1 sauf qu'il n'y a plus d'offset.
+   * On commence donc à pg_adr.
+   * 
+   * on lit toujours min(PGSIZE, n) pour être sûr que le buffer de destination
+   * soit suffisement grand. De cette façon, on est sûr d'avoir lu exactement n octets.
+   * 
+   * à chaque tour, on actualise n, pg_adr (la page à lire) et i (l'offset dans le buffer de destination).
+   */
+  for (; n > 0; n -= PGSIZE, pg_adr += PGSIZE, i += PGSIZE)
+    if (walkpgdir(pgdir, pg_adr, 0) == 0)
+      memset(dst + i, 0, min(PGSIZE, n));
     else
-      memmove(dst, pg_adr, size_cp);
-  }
+      memmove(dst + i, pg_adr, min(PGSIZE, n));
+
   return 0;
 }
 
