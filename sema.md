@@ -22,7 +22,7 @@ struct {
 void 
 seminit(void)
 {
-	initlock(&sem_table, "sem table");
+	initlock(&stable.lock, "sem table");
 	for(uint i = 0; i < NSEM; i ++)
 		initlock(&stable[i].lock, "sema")
 }
@@ -40,7 +40,7 @@ sem_alloc(int cpt)
 	struct sem *s;
 	acquire(&stable.lock);
 
-	for(s = sema; i < &stable.sema[N_SEM]; s++, i++)
+	for(s = stable.sema; i < &stable.sema[N_SEM]; s++, i++)
 		if(s->state == SEM_UNUSED)
 		{
 			s->cpt = test;
@@ -93,7 +93,7 @@ sys_sem_p (void)
 	struct sem *s = f->semaphore;
 	acquire(&s->lock);
 	s->cpt--;
-	while(s->cpt < 0)
+	if(s->cpt < 0)
 		sleep(s, &s->lock);
 
 	release(&s->lock);
@@ -111,9 +111,17 @@ sem_v (int fd)
 	struct sem *s = f->semaphore;
 	acquire(&s->lock);
 	s->cpt++;
-
-	if(s->cpt <= 0)
-		wakeup(s);
+	s->v++;
+	acquire(&ptable.lock);
+	while (sema->cpt <= 0 && s->v > 0) {
+        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+            if(p->state == SLEEPING && p->chan == sema) {
+                p->state = RUNNABLE;
+                sema->v--;
+                break;
+            }
+    }
+	release(&ptable.lock);
 	release(&s->lock);
 	return 0;
 }
@@ -125,7 +133,9 @@ Dans `fileclose()`:
 ```c
 else if(ff.type == FD_SEM)
 {
+	acquire(&ff.semaphore->lock);
 	ff.semaphore->state = SEM_UNUSED;
+	release(&ff.semaphore->lock);
 }
 ```
 
@@ -152,8 +162,7 @@ sys_sem_p (void)
 		wakeup(s);
 	}
 	else
-		while(s->cpt < 0 && s->state != SEM_INTERB)
-			sleep(s, &s->lock);
+		sleep(s, &s->lock);
 
 
 	if(s->state == SEM_INTERB)
@@ -166,5 +175,27 @@ sys_sem_p (void)
 		release(&s->lock);
 		return 0;
 	}
+}
+```
+dans close
+```c
+if(--f->ref > 0)
+{
+	if(ff.semaphore->cpt == - ff.ref)
+	{
+		ff.semaphore->state = SEM_INTERB;
+		wakeup(ff.semaphore);
+	}
+	release(&ftable.lock);
+	return;
+}
+...
+...
+...
+else if(ff.type == FD_SEM)
+{
+	acquire(&ff.semaphore->lock);
+	ff.semaphore->state = SEM_UNUSED;
+	release(&ff.semaphore->lock);
 }
 ```
