@@ -161,7 +161,7 @@ sys_sem_p (void)
 		s->state = SEM_INTERB;
 		wakeup(s);
 	}
-	else
+	else if(s->cpt < 0)
 		sleep(s, &s->lock);
 
 
