@@ -300,8 +300,19 @@ wait(int* reason)
         pid = p->pid;
         kfree(p->kstack);
         p->kstack = 0;
-        for (uint i = 0; i < p->sz && i < KERNBASE; i += PGSIZE)
-          p->rsg.ru_maxrss++;
+        for (uint a = 0; a < KERNBASE; a += PGSIZE)
+        {
+          pde_t *pde;
+          pte_t *pgtab;
+          pde = &p->pgdir[PDX(a)];
+          if (*pde & PTE_P)
+          {
+            pgtab = (pde_t *)P2V((PTE_ADDR(*pde)));
+            pgtab = &pgtab[PTX(a)];
+            if((*pgtab & PTE_P) != 0)
+              p->rsg.ru_maxrss++;
+          }
+        }
 
         freevm(p->pgdir);
         p->pid = 0;
@@ -312,7 +323,7 @@ wait(int* reason)
         curproc->frsg.ru_maxrss += p->rsg.ru_maxrss + 2;
         curproc->frsg.ru_stime += p->rsg.ru_stime;
         curproc->frsg.ru_utime += p->rsg.ru_utime;
-        if(reason)
+        if (reason)
           *reason = p->exit_code;
         release(&ptable.lock);
         return pid;
