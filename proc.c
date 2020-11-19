@@ -75,7 +75,6 @@ allocproc(void)
 {
   struct proc *p;
   char *sp;
-
   acquire(&ptable.lock);
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
@@ -88,6 +87,12 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->rsg.ru_utime = 0;
+  p->rsg.ru_stime = 0;
+  p->rsg.ru_maxrss = 0;
+  p->frsg.ru_utime = 0;
+  p->frsg.ru_stime = 0;
+  p->frsg.ru_maxrss = 0;
 
   release(&ptable.lock);
 
@@ -199,6 +204,12 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+  np->rsg.ru_utime = 0;
+  np->rsg.ru_stime = 0;
+  np->rsg.ru_maxrss = 0;
+  np->frsg.ru_utime = 0;
+  np->frsg.ru_stime = 0;
+  np->frsg.ru_maxrss = 0;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -225,7 +236,7 @@ fork(void)
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
 void
-exit(void)
+exit(int code)
 {
   struct proc *curproc = myproc();
   struct proc *p;
@@ -263,6 +274,7 @@ exit(void)
 
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
+  curproc->exit_code = code;
   sched();
   panic("zombie exit");
 }
@@ -270,12 +282,11 @@ exit(void)
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
 int
-wait(void)
+wait(int* reason)
 {
   struct proc *p;
   int havekids, pid;
   struct proc *curproc = myproc();
-  
   acquire(&ptable.lock);
   for(;;){
     // Scan through table looking for exited children.
@@ -289,12 +300,20 @@ wait(void)
         pid = p->pid;
         kfree(p->kstack);
         p->kstack = 0;
+        for (uint i = 0; i < p->sz && i < KERNBASE; i += PGSIZE)
+          p->rsg.ru_maxrss++;
+
         freevm(p->pgdir);
         p->pid = 0;
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
         p->state = UNUSED;
+        curproc->frsg.ru_maxrss += p->rsg.ru_maxrss + 2;
+        curproc->frsg.ru_stime += p->rsg.ru_stime;
+        curproc->frsg.ru_utime += p->rsg.ru_utime;
+        if(reason)
+          *reason = p->exit_code;
         release(&ptable.lock);
         return pid;
       }

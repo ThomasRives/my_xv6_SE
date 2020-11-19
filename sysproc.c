@@ -16,14 +16,20 @@ sys_fork(void)
 int
 sys_exit(void)
 {
-  exit();
+  int code;
+  if(argint(0, &code) < 0)
+    return -1;
+  exit(code);
   return 0;  // not reached
 }
 
 int
 sys_wait(void)
 {
-  return wait();
+  int *reason;
+  if(argptr(0, (void *)&reason, sizeof(int)) < 0)
+    return -1;
+  return wait(reason);
 }
 
 int
@@ -88,4 +94,21 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+int
+sys_getrusage(void)
+{
+  struct rusage *rs;
+  struct proc *p;
+  // uint size;
+  if(argptr(0, (void *)&rs, sizeof(*rs)) < 0)
+    return -1;
+
+  p = myproc();
+  rs->ru_utime = p->frsg.ru_utime;
+  rs->ru_stime = p->frsg.ru_stime;
+  rs->ru_maxrss = p->frsg.ru_maxrss;
+
+  return 0;
 }
