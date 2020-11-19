@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "ncalls.h"
 
 int
 sys_fork(void)
@@ -88,4 +89,24 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+int
+sys_ncalls1(void)
+{
+  return ncall;
+}
+
+int
+sys_ncalls2(void)
+{
+  struct ncalls *nc;
+  struct proc *p;
+  if(argptr(0, (void*)&nc, sizeof(*nc)) < 0)
+    return -1;
+
+  p = myproc();
+  nc->total = ncall;
+  nc->proc = p->nb_calls;
+  return 0;
 }

@@ -12,6 +12,9 @@ struct {
   struct proc proc[NPROC];
 } ptable;
 
+int ncall = 0;
+struct spinlock call_lock;
+
 static struct proc *initproc;
 
 int nextpid = 1;
@@ -101,6 +104,7 @@ found:
   // Leave room for trap frame.
   sp -= sizeof *p->tf;
   p->tf = (struct trapframe*)sp;
+  p->nb_calls = 0;
 
   // Set up new context to start executing at forkret,
   // which returns to trapret.
@@ -199,6 +203,7 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+  np->nb_calls = 0;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
