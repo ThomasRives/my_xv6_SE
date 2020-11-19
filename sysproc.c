@@ -102,10 +102,9 @@ sys_ncalls2(void)
 {
   struct ncalls *nc;
   struct proc *p;
-  if(argptr(0, (void*)&nc, sizeof(*nc)) < 0)
+  if(argptr(0, (void *)&nc, sizeof(*nc)) < 0 || (p = myproc()) == -1)
     return -1;
 
-  p = myproc();
   nc->total = ncall;
   nc->proc = p->nb_calls;
   return 0;
